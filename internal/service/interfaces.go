@@ -23,13 +23,20 @@ type UserServiceInterface interface {
 
 // MovieServiceInterface defines the contract for movie and watchlist operations.
 type MovieServiceInterface interface {
-	Discover(genre string, page int) ([]tmdb.Movie, error)
-	Search(query string, page int) ([]tmdb.Movie, error)
+	// These now return our clean Domain Model and take userID for watchlist enrichment
+	Discover(userID uuid.UUID, genre string, page int) ([]models.Movie, error)
+	Search(userID uuid.UUID, query string, page int) ([]models.Movie, error)
+
+	// Details still use TMDB structs for now (unless you map them too)
+	// Note: Removed the 'tmdb.' prefix if these are imported correctly
 	GetDetail(mediaType string, id int) (*tmdb.MovieDetail, error)
 	GetVideos(mediaType string, id int) ([]tmdb.Video, error)
 	GetCredits(mediaType string, id int) (*tmdb.CreditsResponse, error)
 	GetProviders(mediaType string, id int) (json.RawMessage, error)
-	AddToWatchlist(userID uuid.UUID, req AddWatchlistRequest) (*models.Watchlist, error)
+
+	// Watchlist operations
+	// Note: Use models.Movie as the request body for Adding
+	AddToWatchlist(userID uuid.UUID, movie models.Movie) (*models.Watchlist, error)
 	GetWatchlist(userID uuid.UUID) ([]models.Watchlist, error)
 	RemoveFromWatchlist(userID uuid.UUID, movieID int) error
 	CheckWatchlist(userID uuid.UUID, movieID int) (bool, error)

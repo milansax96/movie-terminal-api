@@ -26,7 +26,13 @@ func (h *MovieHandler) GetDiscoverFeed(c *gin.Context) {
 	genre := c.DefaultQuery("genre", "trending")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 
-	movies, err := h.svc.Discover(genre, page)
+	val, _ := c.Get("user_id")
+	uid, ok := val.(uuid.UUID)
+	if !ok {
+		uid = uuid.Nil // Handle guest mode
+	}
+
+	movies, err := h.svc.Discover(uid, genre, page)
 	if err != nil {
 		if errors.Is(err, service.ErrUnknownGenre) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Unknown genre: " + genre})
@@ -51,9 +57,15 @@ func (h *MovieHandler) SearchMovies(c *gin.Context) {
 		return
 	}
 
+	val, _ := c.Get("user_id")
+	uid, ok := val.(uuid.UUID)
+	if !ok {
+		uid = uuid.Nil // Handle guest mode
+	}
+
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 
-	movies, err := h.svc.Search(query, page)
+	movies, err := h.svc.Search(uid, query, page)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search movies"})
 

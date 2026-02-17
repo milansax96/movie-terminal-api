@@ -21,7 +21,7 @@ func main() {
 	db := database.InitDB(cfg)
 	database.Migrate(db)
 
-	tmdbClient := tmdb.NewClientWithKey(cfg.TMDBAPIKey)
+	tmdbClient := tmdb.NewClient()
 
 	// Repositories
 	userRepo := repository.NewUserRepository(db)
