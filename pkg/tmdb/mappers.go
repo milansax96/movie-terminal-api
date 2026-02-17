@@ -1,8 +1,6 @@
 package tmdb
 
 import (
-	"fmt"
-
 	"github.com/milansax96/movie-terminal-api/internal/models"
 )
 
@@ -18,8 +16,8 @@ func (m Movie) ToDomain() models.Movie {
 		ID:           m.ID,
 		Title:        displayTitle,
 		Overview:     m.Overview,
-		PosterPath:   fmt.Sprintf("https://image.tmdb.org/t/p/w500%s", m.PosterPath),
-		BackdropPath: fmt.Sprintf("https://image.tmdb.org/t/p/original%s", m.BackdropPath),
+		PosterPath:   m.PosterPath,
+		BackdropPath: m.BackdropPath,
 		ReleaseDate:  m.ReleaseDate,
 		VoteAverage:  m.VoteAverage,
 		MediaType:    m.MediaType,

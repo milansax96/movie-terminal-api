@@ -6,10 +6,10 @@ type Movie struct {
 	ID            int     `json:"id"`
 	Title         string  `json:"title"`
 	Overview      string  `json:"overview"`
-	PosterPath    string  `json:"poster_url"` // Renamed for clarity
-	BackdropPath  string  `json:"backdrop_url"`
+	PosterPath    string  `json:"poster_path"`
+	BackdropPath  string  `json:"backdrop_path"`
 	ReleaseDate   string  `json:"release_date"`
-	VoteAverage   float64 `json:"rating"`         // Renamed from VoteAverage
-	MediaType     string  `json:"type"`           // "movie" or "tv"
-	IsWatchlisted bool    `json:"is_watchlisted"` // We can compute this in the service!
+	VoteAverage   float64 `json:"vote_average"`
+	MediaType     string  `json:"media_type"`
+	IsWatchlisted bool    `json:"is_watchlisted"`
 }
