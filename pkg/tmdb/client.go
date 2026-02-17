@@ -1,4 +1,4 @@
-// Package tmdb provides a client for the TMDB (The Movie Database) API.
+// Package tmdb provides a client for interacting with The Movie Database (TMDB) API.
 package tmdb
 
 import (
@@ -7,16 +7,30 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+
+	"github.com/milansax96/movie-terminal-api/internal/models"
 )
 
-// Client is an HTTP client for the TMDB API.
+// API defines the interface for TMDB API operations returning Domain Models.
+type API interface {
+	GetTrending(mediaType string, timeWindow string) ([]models.Movie, error)
+	GetTopRated(page int) ([]models.Movie, error)
+	DiscoverByGenre(genreID int, page int) ([]models.Movie, error)
+	SearchMovies(query string, page int) ([]models.Movie, error)
+	GetMovieDetails(mediaType string, id int) (*MovieDetail, error)
+	GetVideos(mediaType string, id int) ([]Video, error)
+	GetCredits(mediaType string, id int) (*CreditsResponse, error)
+	GetProviders(mediaType string, id int) (json.RawMessage, error)
+}
+
+// Client is the TMDB API client.
 type Client struct {
 	APIKey     string
 	BaseURL    string
 	HTTPClient *http.Client
 }
 
-// Movie represents a movie or TV show summary from TMDB.
+// Movie represents a movie from the TMDB API response.
 type Movie struct {
 	ID           int     `json:"id"`
 	Title        string  `json:"title"`
@@ -25,20 +39,11 @@ type Movie struct {
 	PosterPath   string  `json:"poster_path"`
 	BackdropPath string  `json:"backdrop_path"`
 	ReleaseDate  string  `json:"release_date"`
-	FirstAirDate string  `json:"first_air_date"`
 	VoteAverage  float64 `json:"vote_average"`
-	VoteCount    int     `json:"vote_count"`
-	GenreIDs     []int   `json:"genre_ids"`
 	MediaType    string  `json:"media_type"`
 }
 
-// Genre represents a TMDB genre.
-type Genre struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
-}
-
-// MovieDetail represents full details for a movie or TV show.
+// MovieDetail represents detailed information about a movie from the TMDB API.
 type MovieDetail struct {
 	ID           int     `json:"id"`
 	Title        string  `json:"title"`
@@ -47,16 +52,20 @@ type MovieDetail struct {
 	PosterPath   string  `json:"poster_path"`
 	BackdropPath string  `json:"backdrop_path"`
 	ReleaseDate  string  `json:"release_date"`
-	FirstAirDate string  `json:"first_air_date"`
 	VoteAverage  float64 `json:"vote_average"`
-	VoteCount    int     `json:"vote_count"`
 	Genres       []Genre `json:"genres"`
 	Tagline      string  `json:"tagline"`
 	Runtime      int     `json:"runtime"`
-	MediaType    string  `json:"media_type,omitempty"`
+	MediaType    string  `json:"media_type"`
 }
 
-// Video represents a video (trailer, teaser, etc.) associated with a title.
+// Genre represents a movie genre.
+type Genre struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+// Video represents a video (trailer, teaser, etc.) from the TMDB API.
 type Video struct {
 	Key  string `json:"key"`
 	Name string `json:"name"`
@@ -64,7 +73,7 @@ type Video struct {
 	Type string `json:"type"`
 }
 
-// CastMember represents an actor in a movie's credits.
+// CastMember represents a cast member from the TMDB API.
 type CastMember struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
@@ -72,35 +81,22 @@ type CastMember struct {
 	ProfilePath string `json:"profile_path"`
 }
 
-// MovieListResponse wraps a paginated list of movies from TMDB.
+// MovieListResponse represents a list of movies from the TMDB API.
 type MovieListResponse struct {
 	Results []Movie `json:"results"`
-	Page    int     `json:"page"`
 }
 
-// VideosResponse wraps a list of videos from TMDB.
+// VideosResponse represents a list of videos from the TMDB API.
 type VideosResponse struct {
 	Results []Video `json:"results"`
 }
 
-// CreditsResponse wraps cast members from TMDB.
+// CreditsResponse represents credits information from the TMDB API.
 type CreditsResponse struct {
 	Cast []CastMember `json:"cast"`
 }
 
-// API defines the interface for TMDB API operations.
-type API interface {
-	GetTrending(mediaType string, timeWindow string) ([]Movie, error)
-	GetTopRated(page int) ([]Movie, error)
-	DiscoverByGenre(genreID int, page int) ([]Movie, error)
-	SearchMovies(query string, page int) ([]Movie, error)
-	GetMovieDetails(mediaType string, id int) (*MovieDetail, error)
-	GetVideos(mediaType string, id int) ([]Video, error)
-	GetCredits(mediaType string, id int) (*CreditsResponse, error)
-	GetProviders(mediaType string, id int) (json.RawMessage, error)
-}
-
-// NewClient creates a new TMDB client using the TMDB_API_KEY environment variable.
+// NewClient creates a new TMDB API client.
 func NewClient() *Client {
 	return &Client{
 		APIKey:     os.Getenv("TMDB_API_KEY"),
@@ -109,113 +105,82 @@ func NewClient() *Client {
 	}
 }
 
-// NewClientWithKey creates a new TMDB client with the given API key.
-func NewClientWithKey(apiKey string) *Client {
-	return &Client{
-		APIKey:     apiKey,
-		BaseURL:    "https://api.themoviedb.org/3",
-		HTTPClient: &http.Client{},
-	}
-}
+func (c *Client) fetch(path string, target interface{}) error {
+	fullURL := fmt.Sprintf("%s%s", c.BaseURL, path)
 
-func (c *Client) get(path string) (*http.Response, error) {
-	return c.HTTPClient.Get(fmt.Sprintf("%s%s", c.BaseURL, path))
-}
-
-// GetTrending returns trending movies or TV shows for the given time window.
-func (c *Client) GetTrending(mediaType string, timeWindow string) (_ []Movie, err error) {
-	resp, err := c.get(fmt.Sprintf("/trending/%s/%s?api_key=%s", mediaType, timeWindow, c.APIKey))
+	// Handle API Key query param injection
+	u, err := url.Parse(fullURL)
 	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if cerr := resp.Body.Close(); cerr != nil && err == nil {
-			err = cerr
-		}
-	}()
-
-	var result MovieListResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, err
+		return err
 	}
 
-	return result.Results, nil
+	q := u.Query()
+	q.Set("api_key", c.APIKey)
+	u.RawQuery = q.Encode()
+
+	resp, err := c.HTTPClient.Get(u.String())
+	if err != nil {
+		return err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("tmdb api error: status %d", resp.StatusCode)
+	}
+
+	return json.NewDecoder(resp.Body).Decode(target)
 }
 
-// GetTopRated returns top-rated movies for the given page.
-func (c *Client) GetTopRated(page int) (_ []Movie, err error) {
-	resp, err := c.get(fmt.Sprintf("/movie/top_rated?api_key=%s&page=%d", c.APIKey, page))
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if cerr := resp.Body.Close(); cerr != nil && err == nil {
-			err = cerr
-		}
-	}()
+// --- API Implementations ---
 
-	var result MovieListResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+// GetTrending returns trending movies or TV shows for the specified time window.
+func (c *Client) GetTrending(mediaType string, timeWindow string) ([]models.Movie, error) {
+	var res MovieListResponse
+	path := fmt.Sprintf("/trending/%s/%s", mediaType, timeWindow)
+	if err := c.fetch(path, &res); err != nil {
 		return nil, err
 	}
 
-	return result.Results, nil
+	return toDomainList(res.Results), nil
 }
 
-// DiscoverByGenre returns movies matching the given genre ID.
-func (c *Client) DiscoverByGenre(genreID int, page int) (_ []Movie, err error) {
-	resp, err := c.get(fmt.Sprintf("/discover/movie?api_key=%s&with_genres=%d&page=%d", c.APIKey, genreID, page))
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if cerr := resp.Body.Close(); cerr != nil && err == nil {
-			err = cerr
-		}
-	}()
-
-	var result MovieListResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+// GetTopRated returns the top-rated movies for the specified page.
+func (c *Client) GetTopRated(page int) ([]models.Movie, error) {
+	var res MovieListResponse
+	path := fmt.Sprintf("/movie/top_rated?page=%d", page)
+	if err := c.fetch(path, &res); err != nil {
 		return nil, err
 	}
 
-	return result.Results, nil
+	return toDomainList(res.Results), nil
 }
 
-// SearchMovies searches for movies and TV shows matching the query.
-func (c *Client) SearchMovies(query string, page int) (_ []Movie, err error) {
-	resp, err := c.get(fmt.Sprintf("/search/multi?api_key=%s&query=%s&page=%d", c.APIKey, url.QueryEscape(query), page))
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if cerr := resp.Body.Close(); cerr != nil && err == nil {
-			err = cerr
-		}
-	}()
-
-	var result MovieListResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+// DiscoverByGenre returns movies discovered by genre for the specified page.
+func (c *Client) DiscoverByGenre(genreID int, page int) ([]models.Movie, error) {
+	var res MovieListResponse
+	path := fmt.Sprintf("/discover/movie?with_genres=%d&page=%d", genreID, page)
+	if err := c.fetch(path, &res); err != nil {
 		return nil, err
 	}
 
-	return result.Results, nil
+	return toDomainList(res.Results), nil
 }
 
-// GetMovieDetails returns full details for a movie or TV show.
-func (c *Client) GetMovieDetails(mediaType string, id int) (_ *MovieDetail, err error) {
-	resp, err := c.get(fmt.Sprintf("/%s/%d?api_key=%s", mediaType, id, c.APIKey))
-	if err != nil {
+// SearchMovies searches for movies matching the specified query.
+func (c *Client) SearchMovies(query string, page int) ([]models.Movie, error) {
+	var res MovieListResponse
+	path := fmt.Sprintf("/search/multi?query=%s&page=%d", url.QueryEscape(query), page)
+	if err := c.fetch(path, &res); err != nil {
 		return nil, err
 	}
-	defer func() {
-		if cerr := resp.Body.Close(); cerr != nil && err == nil {
-			err = cerr
-		}
-	}()
 
+	return toDomainList(res.Results), nil
+}
+
+// GetMovieDetails returns detailed information about a movie or TV show.
+func (c *Client) GetMovieDetails(mediaType string, id int) (*MovieDetail, error) {
 	var detail MovieDetail
-	if err := json.NewDecoder(resp.Body).Decode(&detail); err != nil {
+	if err := c.fetch(fmt.Sprintf("/%s/%d", mediaType, id), &detail); err != nil {
 		return nil, err
 	}
 
@@ -223,61 +188,37 @@ func (c *Client) GetMovieDetails(mediaType string, id int) (_ *MovieDetail, err 
 }
 
 // GetVideos returns videos (trailers, teasers, etc.) for a title.
-func (c *Client) GetVideos(mediaType string, id int) (_ []Video, err error) {
-	resp, err := c.get(fmt.Sprintf("/%s/%d/videos?api_key=%s", mediaType, id, c.APIKey))
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if cerr := resp.Body.Close(); cerr != nil && err == nil {
-			err = cerr
-		}
-	}()
+func (c *Client) GetVideos(mediaType string, id int) ([]Video, error) {
+	var res VideosResponse
+	path := fmt.Sprintf("/%s/%d/videos", mediaType, id)
 
-	var result VideosResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	if err := c.fetch(path, &res); err != nil {
 		return nil, err
 	}
 
-	return result.Results, nil
+	return res.Results, nil
 }
 
 // GetCredits returns cast and crew credits for a title.
-func (c *Client) GetCredits(mediaType string, id int) (_ *CreditsResponse, err error) {
-	resp, err := c.get(fmt.Sprintf("/%s/%d/credits?api_key=%s", mediaType, id, c.APIKey))
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if cerr := resp.Body.Close(); cerr != nil && err == nil {
-			err = cerr
-		}
-	}()
+func (c *Client) GetCredits(mediaType string, id int) (*CreditsResponse, error) {
+	var res CreditsResponse
+	path := fmt.Sprintf("/%s/%d/credits", mediaType, id)
 
-	var result CreditsResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	if err := c.fetch(path, &res); err != nil {
 		return nil, err
 	}
 
-	return &result, nil
+	return &res, nil
 }
 
 // GetProviders returns streaming provider information for a title.
-func (c *Client) GetProviders(mediaType string, id int) (_ json.RawMessage, err error) {
-	resp, err := c.get(fmt.Sprintf("/%s/%d/watch/providers?api_key=%s", mediaType, id, c.APIKey))
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if cerr := resp.Body.Close(); cerr != nil && err == nil {
-			err = cerr
-		}
-	}()
+func (c *Client) GetProviders(mediaType string, id int) (json.RawMessage, error) {
+	var res json.RawMessage
+	path := fmt.Sprintf("/%s/%d/watch/providers", mediaType, id)
 
-	var result json.RawMessage
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	if err := c.fetch(path, &res); err != nil {
 		return nil, err
 	}
 
-	return result, nil
+	return res, nil
 }

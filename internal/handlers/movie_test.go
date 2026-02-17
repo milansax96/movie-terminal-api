@@ -30,7 +30,7 @@ func TestGetDiscoverFeed(t *testing.T) {
 				ts.Movies.Discovers(
 					"trending",
 					1,
-					[]tmdb.Movie{
+					[]models.Movie{
 						{
 							ID:    1,
 							Title: "Test Movie",
@@ -49,7 +49,7 @@ func TestGetDiscoverFeed(t *testing.T) {
 		"with genre": {
 			"/discover?genre=action",
 			func(ts *TestServer) {
-				ts.Movies.Discovers("action", 1, []tmdb.Movie{{ID: 2, Title: "Action Movie"}})
+				ts.Movies.Discovers("action", 1, []models.Movie{{ID: 2, Title: "Action Movie"}})
 			},
 			http.StatusOK,
 			func(t *testing.T, w *httptest.ResponseRecorder) {
@@ -94,7 +94,7 @@ func TestSearchMovies(t *testing.T) {
 				ts.Movies.Searches(
 					"fight club",
 					1,
-					[]tmdb.Movie{
+					[]models.Movie{
 						{
 							ID:    550,
 							Title: "Fight Club",
