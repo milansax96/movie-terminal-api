@@ -1,30 +1,26 @@
+// Package database handles database initialization and migrations.
 package database
 
 import (
 	"fmt"
 	"log"
-	"os"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
+	"github.com/milansax96/movie-terminal-api/config"
 	"github.com/milansax96/movie-terminal-api/internal/models"
 )
 
-func InitDB() *gorm.DB {
-	host := os.Getenv("DB_HOST")
-	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
-	dbname := os.Getenv("DB_NAME")
-	port := os.Getenv("DB_PORT")
-
-	if host == "" || user == "" || password == "" || dbname == "" || port == "" {
+// InitDB opens a PostgreSQL connection using the provided config.
+func InitDB(cfg *config.Config) *gorm.DB {
+	if cfg.DBHost == "" || cfg.DBUser == "" || cfg.DBPassword == "" || cfg.DBName == "" || cfg.DBPort == "" {
 		log.Fatal("Database environment variables are not fully set")
 	}
 
 	dsn := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%s sslmode=require",
-		host, user, password, dbname, port,
+		cfg.DBHost, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBPort,
 	)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -33,9 +29,11 @@ func InitDB() *gorm.DB {
 	}
 
 	log.Println("Database connected successfully")
+
 	return db
 }
 
+// Migrate runs auto-migrations and seeds initial data.
 func Migrate(db *gorm.DB) {
 	err := db.AutoMigrate(
 		&models.User{},
@@ -54,6 +52,7 @@ func Migrate(db *gorm.DB) {
 	log.Println("Database migration completed")
 }
 
+// SeedStreamingServices inserts default streaming services if they don't exist.
 func SeedStreamingServices(db *gorm.DB) {
 	services := []models.StreamingService{
 		{Name: "Netflix", Slug: "netflix"},

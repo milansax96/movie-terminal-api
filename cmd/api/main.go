@@ -1,64 +1,50 @@
+// Package main is the entry point for the Movie Terminal API server.
 package main
 
 import (
 	"log"
-	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 
+	"github.com/milansax96/movie-terminal-api/config"
 	"github.com/milansax96/movie-terminal-api/internal/database"
 	"github.com/milansax96/movie-terminal-api/internal/handlers"
 	"github.com/milansax96/movie-terminal-api/internal/middleware"
+	"github.com/milansax96/movie-terminal-api/internal/repository"
+	"github.com/milansax96/movie-terminal-api/internal/service"
+	"github.com/milansax96/movie-terminal-api/pkg/tmdb"
 )
 
 func main() {
-	if err := godotenv.Load("../../.env"); err != nil {
-		log.Println("No .env file found")
-	}
+	cfg := config.Load()
 
-	db := database.InitDB()
-
+	db := database.InitDB(cfg)
 	database.Migrate(db)
 
+	tmdbClient := tmdb.NewClientWithKey(cfg.TMDBAPIKey)
+
+	// Repositories
+	userRepo := repository.NewUserRepository(db)
+	watchlistRepo := repository.NewWatchlistRepository(db)
+	friendshipRepo := repository.NewFriendshipRepository(db)
+	postRepo := repository.NewPostRepository(db)
+
+	// Services
+	authSvc := service.NewAuthService(userRepo, cfg)
+	userSvc := service.NewUserService(userRepo)
+	movieSvc := service.NewMovieService(tmdbClient, watchlistRepo)
+	socialSvc := service.NewSocialService(friendshipRepo, postRepo, userRepo)
+
+	// Router
 	r := gin.Default()
 	r.Use(middleware.CORS())
 
-	// Public routes
-	auth := r.Group("/api/v1/auth")
-	{
-		auth.POST("/signup", handlers.Signup(db))
-		auth.POST("/login", handlers.Login(db))
+	handlers.RegisterAuthRoutes(r, authSvc)
+	handlers.RegisterProtectedRoutes(r, cfg.JWTSecret, userSvc, movieSvc, socialSvc)
+
+	log.Printf("Server starting on port %s", cfg.Port)
+	err := r.Run(":" + cfg.Port)
+	if err != nil {
+		log.Fatalf("Failed to start server: %v", err)
 	}
-
-	// Protected routes
-	api := r.Group("/api/v1")
-	api.Use(middleware.AuthRequired())
-	{
-		// User profile
-		api.GET("/user/profile", handlers.GetProfile(db))
-		api.PUT("/user/streaming-services", handlers.UpdateStreamingServices(db))
-
-		// Discovery
-		api.GET("/discover", handlers.GetDiscoverFeed(db))
-		api.POST("/watchlist", handlers.AddToWatchlist(db))
-
-		// Friends
-		api.GET("/friends", handlers.GetFriends(db))
-		api.POST("/friends/request", handlers.SendFriendRequest(db))
-		api.PUT("/friends/accept/:id", handlers.AcceptFriendRequest(db))
-		api.GET("/friends/search", handlers.SearchUsers(db))
-
-		// Feed
-		api.GET("/feed", handlers.GetFriendsFeed(db))
-		api.POST("/posts", handlers.CreatePost(db))
-	}
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	log.Printf("Server starting on port %s", port)
-	r.Run(":" + port)
 }

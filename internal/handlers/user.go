@@ -1,58 +1,63 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
+	"github.com/google/uuid"
 
-	"github.com/milansax96/movie-terminal-api/internal/models"
+	"github.com/milansax96/movie-terminal-api/internal/service"
 )
 
-func GetProfile(db *gorm.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		userID := c.GetString("user_id")
-
-		var user models.User
-		if err := db.Preload("StreamingServices").First(&user, "id = ?", userID).Error; err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-			return
-		}
-
-		c.JSON(http.StatusOK, user)
-	}
+// UserHandler handles user profile endpoints.
+type UserHandler struct {
+	svc service.UserServiceInterface
 }
 
-func UpdateStreamingServices(db *gorm.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		userID := c.GetString("user_id")
+// NewUserHandler creates a new UserHandler.
+func NewUserHandler(svc service.UserServiceInterface) *UserHandler {
+	return &UserHandler{svc: svc}
+}
 
-		var req struct {
-			ServiceIDs []int `json:"service_ids" binding:"required"`
-		}
+// GetProfile returns the authenticated user's profile.
+func (h *UserHandler) GetProfile(c *gin.Context) {
+	userID := uuid.MustParse(c.GetString("user_id"))
 
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		var user models.User
-		if err := db.First(&user, "id = ?", userID).Error; err != nil {
+	user, err := h.svc.GetProfile(userID)
+	if err != nil {
+		if errors.Is(err, service.ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+
 			return
 		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch profile"})
 
-		var services []models.StreamingService
-		if err := db.Where("id IN ?", req.ServiceIDs).Find(&services).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch services"})
-			return
-		}
-
-		if err := db.Model(&user).Association("StreamingServices").Replace(services); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update services"})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"message": "Streaming services updated"})
+		return
 	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+// UpdateStreamingServices updates the user's streaming service preferences.
+func (h *UserHandler) UpdateStreamingServices(c *gin.Context) {
+	userID := uuid.MustParse(c.GetString("user_id"))
+
+	var req struct {
+		ServiceIDs []int `json:"service_ids" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+
+		return
+	}
+
+	if err := h.svc.UpdateStreamingServices(userID, req.ServiceIDs); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update services"})
+
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Streaming services updated"})
 }
