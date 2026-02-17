@@ -134,16 +134,16 @@ type MovieSvcHelper struct {
 	*svcMocks.MockMovieServiceInterface
 }
 
-func (h *MovieSvcHelper) Discovers(genre string, page int, movies []tmdb.Movie) {
-	h.On("Discover", genre, page).Return(movies, nil)
+func (h *MovieSvcHelper) Discovers(genre string, page int, movies []models.Movie) {
+	h.On("Discover", mock.AnythingOfType("uuid.UUID"), genre, page).Return(movies, nil)
 }
 
 func (h *MovieSvcHelper) DiscoverFails(genre string, err error) {
-	h.On("Discover", genre, 1).Return([]tmdb.Movie(nil), err)
+	h.On("Discover", mock.AnythingOfType("uuid.UUID"), genre, 1).Return([]models.Movie(nil), err)
 }
 
-func (h *MovieSvcHelper) Searches(query string, page int, movies []tmdb.Movie) {
-	h.On("Search", query, page).Return(movies, nil)
+func (h *MovieSvcHelper) Searches(query string, page int, movies []models.Movie) {
+	h.On("Search", mock.AnythingOfType("uuid.UUID"), query, page).Return(movies, nil)
 }
 
 func (h *MovieSvcHelper) ReturnsDetail(mediaType string, id int, detail *tmdb.MovieDetail) {
@@ -171,12 +171,12 @@ func (h *MovieSvcHelper) ReturnsWatchlist(items []models.Watchlist) {
 }
 
 func (h *MovieSvcHelper) AddsToWatchlist(item *models.Watchlist) {
-	h.On("AddToWatchlist", mock.AnythingOfType("uuid.UUID"), mock.AnythingOfType("service.AddWatchlistRequest")).
+	h.On("AddToWatchlist", mock.AnythingOfType("uuid.UUID"), mock.AnythingOfType("models.Movie")).
 		Return(item, nil)
 }
 
 func (h *MovieSvcHelper) AddToWatchlistFails(err error) {
-	h.On("AddToWatchlist", mock.AnythingOfType("uuid.UUID"), mock.AnythingOfType("service.AddWatchlistRequest")).
+	h.On("AddToWatchlist", mock.AnythingOfType("uuid.UUID"), mock.AnythingOfType("models.Movie")).
 		Return((*models.Watchlist)(nil), err)
 }
 

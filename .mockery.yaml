@@ -4,7 +4,7 @@ outpkg: mocks
 packages:
   github.com/milansax96/movie-terminal-api/pkg/tmdb:
     interfaces:
-      TMDBClient:
+      API:
   github.com/milansax96/movie-terminal-api/internal/repository:
     interfaces:
       UserRepository:

@@ -18,39 +18,43 @@ func TestDiscover(t *testing.T) {
 	tests := map[string]struct {
 		genre  string
 		page   int
-		setup  func(*TestEnv)
-		movies []tmdb.Movie
+		setup  func(*TestEnv, uuid.UUID)
+		movies []models.Movie
 		err    error
 	}{
 		"trending": {
 			"trending",
 			1,
-			func(env *TestEnv) {
+			func(env *TestEnv, userID uuid.UUID) {
 				env.TMDB.ReturnsTrending(
-					[]tmdb.Movie{
+					[]models.Movie{
 						{
 							ID:    1,
 							Title: "Trending Movie",
 						},
 					},
 				)
+				env.Watchlist.ReturnsWatchlist(userID, nil)
 			},
-			[]tmdb.Movie{
+			[]models.Movie{
 				{ID: 1, Title: "Trending Movie"},
 			},
 			nil,
 		},
-		"top rated": {"top_rated", 1, func(env *TestEnv) {
-			env.TMDB.ReturnsTopRated(1, []tmdb.Movie{{ID: 2, Title: "Top Rated"}})
-		}, []tmdb.Movie{{ID: 2, Title: "Top Rated"}}, nil},
-		"action genre": {"action", 1, func(env *TestEnv) {
-			env.TMDB.ReturnsGenre(28, 1, []tmdb.Movie{{ID: 3, Title: "Action Movie"}})
-		}, []tmdb.Movie{{ID: 3, Title: "Action Movie"}}, nil},
-		"comedy genre page 2": {"comedy", 2, func(env *TestEnv) {
-			env.TMDB.ReturnsGenre(35, 2, []tmdb.Movie{{ID: 4, Title: "Comedy Movie"}})
-		}, []tmdb.Movie{{ID: 4, Title: "Comedy Movie"}}, nil},
-		"unknown genre": {"nonexistent", 1, func(_ *TestEnv) {}, nil, ErrUnknownGenre},
-		"tmdb error": {"trending", 1, func(env *TestEnv) {
+		"top rated": {"top_rated", 1, func(env *TestEnv, userID uuid.UUID) {
+			env.TMDB.ReturnsTopRated(1, []models.Movie{{ID: 2, Title: "Top Rated"}})
+			env.Watchlist.ReturnsWatchlist(userID, nil)
+		}, []models.Movie{{ID: 2, Title: "Top Rated"}}, nil},
+		"action genre": {"action", 1, func(env *TestEnv, userID uuid.UUID) {
+			env.TMDB.ReturnsGenre(28, 1, []models.Movie{{ID: 3, Title: "Action Movie"}})
+			env.Watchlist.ReturnsWatchlist(userID, nil)
+		}, []models.Movie{{ID: 3, Title: "Action Movie"}}, nil},
+		"comedy genre page 2": {"comedy", 2, func(env *TestEnv, userID uuid.UUID) {
+			env.TMDB.ReturnsGenre(35, 2, []models.Movie{{ID: 4, Title: "Comedy Movie"}})
+			env.Watchlist.ReturnsWatchlist(userID, nil)
+		}, []models.Movie{{ID: 4, Title: "Comedy Movie"}}, nil},
+		"unknown genre": {"nonexistent", 1, func(_ *TestEnv, _ uuid.UUID) {}, nil, ErrUnknownGenre},
+		"tmdb error": {"trending", 1, func(env *TestEnv, _ uuid.UUID) {
 			env.TMDB.TrendingFails(errors.New("network error"))
 		}, nil, errors.New("network error")},
 	}
@@ -58,9 +62,10 @@ func TestDiscover(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			env := newTestEnv(t)
-			tt.setup(env)
+			userID := uuid.New()
+			tt.setup(env, userID)
 
-			movies, err := env.MovieService().Discover(tt.genre, tt.page)
+			movies, err := env.MovieService().Discover(userID, tt.genre, tt.page)
 
 			if tt.err != nil {
 				assert.Error(t, err)
@@ -92,14 +97,15 @@ func TestSearch(t *testing.T) {
 	tests := map[string]struct {
 		query  string
 		page   int
-		setup  func(*TestEnv)
-		movies []tmdb.Movie
+		setup  func(*TestEnv, uuid.UUID)
+		movies []models.Movie
 		hasErr bool
 	}{
-		"success": {"fight club", 1, func(env *TestEnv) {
-			env.TMDB.SearchReturns("fight club", 1, []tmdb.Movie{{ID: 550, Title: "Fight Club"}})
-		}, []tmdb.Movie{{ID: 550, Title: "Fight Club"}}, false},
-		"tmdb error": {"query", 1, func(env *TestEnv) {
+		"success": {"fight club", 1, func(env *TestEnv, userID uuid.UUID) {
+			env.TMDB.SearchReturns("fight club", 1, []models.Movie{{ID: 550, Title: "Fight Club"}})
+			env.Watchlist.ReturnsWatchlist(userID, nil)
+		}, []models.Movie{{ID: 550, Title: "Fight Club"}}, false},
+		"tmdb error": {"query", 1, func(env *TestEnv, _ uuid.UUID) {
 			env.TMDB.SearchFails("query", 1, errors.New("timeout"))
 		}, nil, true},
 	}
@@ -107,9 +113,10 @@ func TestSearch(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			env := newTestEnv(t)
-			tt.setup(env)
+			userID := uuid.New()
+			tt.setup(env, userID)
 
-			movies, err := env.MovieService().Search(tt.query, tt.page)
+			movies, err := env.MovieService().Search(userID, tt.query, tt.page)
 
 			if tt.hasErr {
 				assert.Error(t, err)
@@ -182,8 +189,8 @@ func TestAddToWatchlist(t *testing.T) {
 			env := newTestEnv(t)
 			tt.setup(env)
 
-			item, err := env.MovieService().AddToWatchlist(uuid.New(), AddWatchlistRequest{
-				MovieID: 550, Title: "Fight Club", MediaType: "movie",
+			item, err := env.MovieService().AddToWatchlist(uuid.New(), models.Movie{
+				ID: 550, Title: "Fight Club", MediaType: "movie",
 			})
 
 			if tt.err != nil {

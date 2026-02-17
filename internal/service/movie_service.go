@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,11 +23,13 @@ var genreMap = map[string]int{
 	"tv_movie":  10770,
 }
 
+// MovieService handles movie discovery, search, and watchlist operations.
 type MovieService struct {
 	tmdb          tmdb.API
 	watchlistRepo repository.WatchlistRepository
 }
 
+// NewMovieService creates and returns a new MovieService instance.
 func NewMovieService(tmdbClient tmdb.API, watchlistRepo repository.WatchlistRepository) *MovieService {
 	return &MovieService{
 		tmdb:          tmdbClient,
@@ -72,6 +75,31 @@ func (s *MovieService) Search(userID uuid.UUID, query string, page int) ([]model
 // GetDetail returns full details (No changes needed here unless you create a Detail domain model too).
 func (s *MovieService) GetDetail(mediaType string, id int) (*tmdb.MovieDetail, error) {
 	return s.tmdb.GetMovieDetails(mediaType, id)
+}
+
+// GetVideos returns videos for a movie or TV show.
+func (s *MovieService) GetVideos(mediaType string, id int) ([]tmdb.Video, error) {
+	return s.tmdb.GetVideos(mediaType, id)
+}
+
+// GetCredits returns credits for a movie or TV show.
+func (s *MovieService) GetCredits(mediaType string, id int) (*tmdb.CreditsResponse, error) {
+	return s.tmdb.GetCredits(mediaType, id)
+}
+
+// GetProviders returns streaming providers for a title.
+func (s *MovieService) GetProviders(mediaType string, id int) (json.RawMessage, error) {
+	return s.tmdb.GetProviders(mediaType, id)
+}
+
+// GetWatchlist returns all watchlist items for a user.
+func (s *MovieService) GetWatchlist(userID uuid.UUID) ([]models.Watchlist, error) {
+	return s.watchlistRepo.GetByUserID(userID)
+}
+
+// CheckWatchlist checks if a movie is in the user's watchlist.
+func (s *MovieService) CheckWatchlist(userID uuid.UUID, movieID int) (bool, error) {
+	return s.watchlistRepo.Exists(userID, movieID)
 }
 
 // AddToWatchlist converts a request into a Database Watchlist model.

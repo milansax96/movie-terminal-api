@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
+	"github.com/milansax96/movie-terminal-api/internal/models"
 	"github.com/milansax96/movie-terminal-api/internal/service"
 )
 
@@ -192,8 +193,8 @@ func (h *MovieHandler) AddToWatchlist(c *gin.Context) {
 		return
 	}
 
-	item, err := h.svc.AddToWatchlist(userID, service.AddWatchlistRequest{
-		MovieID:      req.MovieID,
+	item, err := h.svc.AddToWatchlist(userID, models.Movie{
+		ID:           req.MovieID,
 		Title:        req.Title,
 		PosterPath:   req.PosterPath,
 		BackdropPath: req.BackdropPath,

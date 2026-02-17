@@ -1,3 +1,4 @@
+// Package tmdb provides a client for interacting with The Movie Database (TMDB) API.
 package tmdb
 
 import (
@@ -22,13 +23,14 @@ type API interface {
 	GetProviders(mediaType string, id int) (json.RawMessage, error)
 }
 
+// Client is the TMDB API client.
 type Client struct {
 	APIKey     string
 	BaseURL    string
 	HTTPClient *http.Client
 }
 
-// This must exist in the same package for the mapper to work!
+// Movie represents a movie from the TMDB API response.
 type Movie struct {
 	ID           int     `json:"id"`
 	Title        string  `json:"title"`
@@ -41,6 +43,7 @@ type Movie struct {
 	MediaType    string  `json:"media_type"`
 }
 
+// MovieDetail represents detailed information about a movie from the TMDB API.
 type MovieDetail struct {
 	ID           int     `json:"id"`
 	Title        string  `json:"title"`
@@ -53,13 +56,16 @@ type MovieDetail struct {
 	Genres       []Genre `json:"genres"`
 	Tagline      string  `json:"tagline"`
 	Runtime      int     `json:"runtime"`
+	MediaType    string  `json:"media_type"`
 }
 
+// Genre represents a movie genre.
 type Genre struct {
 	ID   int    `json:"id"`
 	Name string `json:"name"`
 }
 
+// Video represents a video (trailer, teaser, etc.) from the TMDB API.
 type Video struct {
 	Key  string `json:"key"`
 	Name string `json:"name"`
@@ -67,6 +73,7 @@ type Video struct {
 	Type string `json:"type"`
 }
 
+// CastMember represents a cast member from the TMDB API.
 type CastMember struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
@@ -74,18 +81,22 @@ type CastMember struct {
 	ProfilePath string `json:"profile_path"`
 }
 
+// MovieListResponse represents a list of movies from the TMDB API.
 type MovieListResponse struct {
 	Results []Movie `json:"results"`
 }
 
+// VideosResponse represents a list of videos from the TMDB API.
 type VideosResponse struct {
 	Results []Video `json:"results"`
 }
 
+// CreditsResponse represents credits information from the TMDB API.
 type CreditsResponse struct {
 	Cast []CastMember `json:"cast"`
 }
 
+// NewClient creates a new TMDB API client.
 func NewClient() *Client {
 	return &Client{
 		APIKey:     os.Getenv("TMDB_API_KEY"),
@@ -111,7 +122,7 @@ func (c *Client) fetch(path string, target interface{}) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("tmdb api error: status %d", resp.StatusCode)
@@ -122,48 +133,57 @@ func (c *Client) fetch(path string, target interface{}) error {
 
 // --- API Implementations ---
 
+// GetTrending returns trending movies or TV shows for the specified time window.
 func (c *Client) GetTrending(mediaType string, timeWindow string) ([]models.Movie, error) {
 	var res MovieListResponse
 	path := fmt.Sprintf("/trending/%s/%s", mediaType, timeWindow)
 	if err := c.fetch(path, &res); err != nil {
 		return nil, err
 	}
+
 	return toDomainList(res.Results), nil
 }
 
+// GetTopRated returns the top-rated movies for the specified page.
 func (c *Client) GetTopRated(page int) ([]models.Movie, error) {
 	var res MovieListResponse
 	path := fmt.Sprintf("/movie/top_rated?page=%d", page)
 	if err := c.fetch(path, &res); err != nil {
 		return nil, err
 	}
+
 	return toDomainList(res.Results), nil
 }
 
+// DiscoverByGenre returns movies discovered by genre for the specified page.
 func (c *Client) DiscoverByGenre(genreID int, page int) ([]models.Movie, error) {
 	var res MovieListResponse
 	path := fmt.Sprintf("/discover/movie?with_genres=%d&page=%d", genreID, page)
 	if err := c.fetch(path, &res); err != nil {
 		return nil, err
 	}
+
 	return toDomainList(res.Results), nil
 }
 
+// SearchMovies searches for movies matching the specified query.
 func (c *Client) SearchMovies(query string, page int) ([]models.Movie, error) {
 	var res MovieListResponse
 	path := fmt.Sprintf("/search/multi?query=%s&page=%d", url.QueryEscape(query), page)
 	if err := c.fetch(path, &res); err != nil {
 		return nil, err
 	}
+
 	return toDomainList(res.Results), nil
 }
 
-// Detailed views remain mostly the same but use the fetch helper
+// GetMovieDetails returns detailed information about a movie or TV show.
 func (c *Client) GetMovieDetails(mediaType string, id int) (*MovieDetail, error) {
 	var detail MovieDetail
 	if err := c.fetch(fmt.Sprintf("/%s/%d", mediaType, id), &detail); err != nil {
 		return nil, err
 	}
+
 	return &detail, nil
 }
 

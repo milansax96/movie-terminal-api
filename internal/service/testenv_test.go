@@ -26,7 +26,7 @@ type TestEnv struct {
 
 func newTestEnv(t *testing.T) *TestEnv {
 	return &TestEnv{
-		TMDB:      &TMDBHelper{tmdbMocks.NewMockTMDBClient(t)},
+		TMDB:      &TMDBHelper{tmdbMocks.NewMockAPI(t)},
 		Users:     &UserRepoHelper{repoMocks.NewMockUserRepository(t)},
 		Watchlist: &WatchlistRepoHelper{repoMocks.NewMockWatchlistRepository(t)},
 		Friends:   &FriendRepoHelper{repoMocks.NewMockFriendshipRepository(t)},
@@ -35,7 +35,7 @@ func newTestEnv(t *testing.T) *TestEnv {
 }
 
 func (e *TestEnv) MovieService() *MovieService {
-	return NewMovieService(e.TMDB.MockTMDBClient, e.Watchlist.MockWatchlistRepository)
+	return NewMovieService(e.TMDB.MockAPI, e.Watchlist.MockWatchlistRepository)
 }
 
 func (e *TestEnv) UserService() *UserService {
@@ -49,22 +49,22 @@ func (e *TestEnv) SocialService() *SocialService {
 // --- TMDBHelper ---
 
 type TMDBHelper struct {
-	*tmdbMocks.MockTMDBClient
+	*tmdbMocks.MockAPI
 }
 
-func (h *TMDBHelper) ReturnsTrending(movies []tmdb.Movie) {
+func (h *TMDBHelper) ReturnsTrending(movies []models.Movie) {
 	h.On("GetTrending", "all", "week").Return(movies, nil)
 }
 
-func (h *TMDBHelper) ReturnsTopRated(page int, movies []tmdb.Movie) {
+func (h *TMDBHelper) ReturnsTopRated(page int, movies []models.Movie) {
 	h.On("GetTopRated", page).Return(movies, nil)
 }
 
-func (h *TMDBHelper) ReturnsGenre(genreID, page int, movies []tmdb.Movie) {
+func (h *TMDBHelper) ReturnsGenre(genreID, page int, movies []models.Movie) {
 	h.On("DiscoverByGenre", genreID, page).Return(movies, nil)
 }
 
-func (h *TMDBHelper) SearchReturns(query string, page int, movies []tmdb.Movie) {
+func (h *TMDBHelper) SearchReturns(query string, page int, movies []models.Movie) {
 	h.On("SearchMovies", query, page).Return(movies, nil)
 }
 
@@ -85,11 +85,11 @@ func (h *TMDBHelper) ReturnsProviders(mediaType string, id int, providers json.R
 }
 
 func (h *TMDBHelper) TrendingFails(err error) {
-	h.On("GetTrending", "all", "week").Return([]tmdb.Movie(nil), err)
+	h.On("GetTrending", "all", "week").Return([]models.Movie(nil), err)
 }
 
 func (h *TMDBHelper) SearchFails(query string, page int, err error) {
-	h.On("SearchMovies", query, page).Return([]tmdb.Movie(nil), err)
+	h.On("SearchMovies", query, page).Return([]models.Movie(nil), err)
 }
 
 // --- WatchlistRepoHelper ---
