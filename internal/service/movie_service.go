@@ -137,6 +137,10 @@ func (s *MovieService) RemoveFromWatchlist(userID uuid.UUID, movieID int) error 
 
 // enrichWithWatchlist marks movies as 'IsWatchlisted' based on the user's data.
 func (s *MovieService) enrichWithWatchlist(userID uuid.UUID, movies []models.Movie) ([]models.Movie, error) {
+	if userID == uuid.Nil {
+		return movies, nil
+	}
+
 	watchlist, err := s.watchlistRepo.GetByUserID(userID)
 	if err != nil {
 		return movies, nil // Fail silently on enrichment; better to show movies without icons than error.
