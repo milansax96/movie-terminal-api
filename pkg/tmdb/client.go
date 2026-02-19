@@ -152,7 +152,7 @@ func (c *Client) GetTopRated(page int) ([]models.Movie, error) {
 		return nil, err
 	}
 
-	return toDomainList(res.Results), nil
+	return toDomainListWithDefault(res.Results, "movie"), nil
 }
 
 // DiscoverByGenre returns movies discovered by genre for the specified page.
@@ -163,7 +163,7 @@ func (c *Client) DiscoverByGenre(genreID int, page int) ([]models.Movie, error) 
 		return nil, err
 	}
 
-	return toDomainList(res.Results), nil
+	return toDomainListWithDefault(res.Results, "movie"), nil
 }
 
 // SearchMovies searches for movies matching the specified query.

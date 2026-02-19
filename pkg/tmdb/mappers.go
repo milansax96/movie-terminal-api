@@ -32,3 +32,17 @@ func toDomainList(tmdbMovies []Movie) []models.Movie {
 
 	return domain
 }
+
+// toDomainListWithDefault converts and sets a fallback media_type for endpoints
+// that only return one type (e.g. /movie/top_rated, /discover/movie).
+func toDomainListWithDefault(tmdbMovies []Movie, defaultMediaType string) []models.Movie {
+	domain := make([]models.Movie, len(tmdbMovies))
+	for i, m := range tmdbMovies {
+		domain[i] = m.ToDomain()
+		if domain[i].MediaType == "" {
+			domain[i].MediaType = defaultMediaType
+		}
+	}
+
+	return domain
+}

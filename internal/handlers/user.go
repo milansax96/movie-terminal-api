@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 
 	"github.com/milansax96/movie-terminal-api/internal/service"
 )
@@ -22,7 +21,10 @@ func NewUserHandler(svc service.UserServiceInterface) *UserHandler {
 
 // GetProfile returns the authenticated user's profile.
 func (h *UserHandler) GetProfile(c *gin.Context) {
-	userID := uuid.MustParse(c.GetString("user_id"))
+	userID, ok := parseUserID(c)
+	if !ok {
+		return
+	}
 
 	user, err := h.svc.GetProfile(userID)
 	if err != nil {
@@ -41,7 +43,10 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 
 // UpdateStreamingServices updates the user's streaming service preferences.
 func (h *UserHandler) UpdateStreamingServices(c *gin.Context) {
-	userID := uuid.MustParse(c.GetString("user_id"))
+	userID, ok := parseUserID(c)
+	if !ok {
+		return
+	}
 
 	var req struct {
 		ServiceIDs []int `json:"service_ids" binding:"required"`

@@ -27,11 +27,7 @@ func (h *MovieHandler) GetDiscoverFeed(c *gin.Context) {
 	genre := c.DefaultQuery("genre", "trending")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 
-	val, _ := c.Get("user_id")
-	uid, ok := val.(uuid.UUID)
-	if !ok {
-		uid = uuid.Nil // Handle guest mode
-	}
+	uid, _ := uuid.Parse(c.GetString("user_id"))
 
 	movies, err := h.svc.Discover(uid, genre, page)
 	if err != nil {
@@ -58,11 +54,7 @@ func (h *MovieHandler) SearchMovies(c *gin.Context) {
 		return
 	}
 
-	val, _ := c.Get("user_id")
-	uid, ok := val.(uuid.UUID)
-	if !ok {
-		uid = uuid.Nil // Handle guest mode
-	}
+	uid, _ := uuid.Parse(c.GetString("user_id"))
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 
@@ -163,7 +155,10 @@ func (h *MovieHandler) GetMovieProviders(c *gin.Context) {
 
 // GetWatchlist returns the user's watchlist.
 func (h *MovieHandler) GetWatchlist(c *gin.Context) {
-	userID := uuid.MustParse(c.GetString("user_id"))
+	userID, ok := parseUserID(c)
+	if !ok {
+		return
+	}
 
 	items, err := h.svc.GetWatchlist(userID)
 	if err != nil {
@@ -177,7 +172,10 @@ func (h *MovieHandler) GetWatchlist(c *gin.Context) {
 
 // AddToWatchlist adds a movie to the user's watchlist.
 func (h *MovieHandler) AddToWatchlist(c *gin.Context) {
-	userID := uuid.MustParse(c.GetString("user_id"))
+	userID, ok := parseUserID(c)
+	if !ok {
+		return
+	}
 
 	var req struct {
 		MovieID      int    `json:"movie_id" binding:"required"`
@@ -216,7 +214,11 @@ func (h *MovieHandler) AddToWatchlist(c *gin.Context) {
 
 // RemoveFromWatchlist removes a movie from the user's watchlist.
 func (h *MovieHandler) RemoveFromWatchlist(c *gin.Context) {
-	userID := uuid.MustParse(c.GetString("user_id"))
+	userID, ok := parseUserID(c)
+	if !ok {
+		return
+	}
+
 	movieID, err := strconv.Atoi(c.Param("movie_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid movie ID"})
@@ -240,7 +242,11 @@ func (h *MovieHandler) RemoveFromWatchlist(c *gin.Context) {
 
 // CheckWatchlist checks if a movie is in the user's watchlist.
 func (h *MovieHandler) CheckWatchlist(c *gin.Context) {
-	userID := uuid.MustParse(c.GetString("user_id"))
+	userID, ok := parseUserID(c)
+	if !ok {
+		return
+	}
+
 	movieID, err := strconv.Atoi(c.Param("movie_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid movie ID"})

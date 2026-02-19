@@ -19,9 +19,19 @@ func TestGetFriends(t *testing.T) {
 		setup  func(*TestServer)
 		status int
 	}{
-		"success": {func(ts *TestServer) {
-			ts.Social.ReturnsFriends([]models.Friendship{{UserID: uuid.New(), FriendID: uuid.New(), Status: "accepted"}})
-		}, http.StatusOK},
+		"success": {
+			func(ts *TestServer) {
+				testFriend := []models.Friendship{
+					{
+						UserID:   uuid.New(),
+						FriendID: uuid.New(),
+						Status:   "accepted",
+					},
+				}
+				ts.Social.ReturnsFriends(testFriend)
+			},
+			http.StatusOK,
+		},
 		"db error": {func(ts *TestServer) {
 			ts.Social.GetFriendsFails(errors.New("db error"))
 		}, http.StatusInternalServerError},
@@ -43,10 +53,19 @@ func TestSearchUsers(t *testing.T) {
 		setup  func(*TestServer)
 		status int
 	}{
-		"success": {"/friends/search?q=test", func(ts *TestServer) {
-			ts.Social.SearchReturns("test", []models.User{{Username: "testuser"}})
-		}, http.StatusOK},
-		"missing query": {"/friends/search", func(_ *TestServer) {}, http.StatusBadRequest},
+		"success": {
+			"/friends/search?q=test",
+			func(ts *TestServer) {
+				testUser := []models.User{{Username: "testuser"}}
+				ts.Social.SearchReturns("test", testUser)
+			},
+			http.StatusOK,
+		},
+		"missing query": {
+			"/friends/search",
+			func(_ *TestServer) {},
+			http.StatusBadRequest,
+		},
 	}
 
 	for name, tt := range tests {
@@ -66,13 +85,29 @@ func TestSendFriendRequest(t *testing.T) {
 		setup  func(*TestServer)
 		status int
 	}{
-		"success": {`{"friend_id": "` + friendID + `"}`, func(ts *TestServer) {
-			ts.Social.SendsRequest(&models.Friendship{Status: "pending"})
-		}, http.StatusCreated},
-		"duplicate": {`{"friend_id": "` + friendID + `"}`, func(ts *TestServer) {
-			ts.Social.SendRequestFails(service.ErrAlreadyExists)
-		}, http.StatusConflict},
-		"missing body": {`{}`, func(_ *TestServer) {}, http.StatusBadRequest},
+		"success": {
+			`{"friend_id": "` + friendID + `"}`,
+			func(ts *TestServer) {
+				pendingFriend := &models.Friendship{
+					Status: "pending",
+				}
+
+				ts.Social.SendsRequest(pendingFriend)
+			},
+			http.StatusCreated,
+		},
+		"duplicate": {
+			`{"friend_id": "` + friendID + `"}`,
+			func(ts *TestServer) {
+				ts.Social.SendRequestFails(service.ErrAlreadyExists)
+			},
+			http.StatusConflict,
+		},
+		"missing body": {
+			`{}`,
+			func(_ *TestServer) {},
+			http.StatusBadRequest,
+		},
 	}
 
 	for name, tt := range tests {

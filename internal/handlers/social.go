@@ -22,7 +22,10 @@ func NewSocialHandler(svc service.SocialServiceInterface) *SocialHandler {
 
 // GetFriends returns the user's accepted friendships.
 func (h *SocialHandler) GetFriends(c *gin.Context) {
-	userID := uuid.MustParse(c.GetString("user_id"))
+	userID, ok := parseUserID(c)
+	if !ok {
+		return
+	}
 
 	friendships, err := h.svc.GetFriends(userID)
 	if err != nil {
@@ -55,7 +58,10 @@ func (h *SocialHandler) SearchUsers(c *gin.Context) {
 
 // SendFriendRequest sends a friend request to another user.
 func (h *SocialHandler) SendFriendRequest(c *gin.Context) {
-	userID := uuid.MustParse(c.GetString("user_id"))
+	userID, ok := parseUserID(c)
+	if !ok {
+		return
+	}
 
 	var req struct {
 		FriendID string `json:"friend_id" binding:"required"`
@@ -67,7 +73,14 @@ func (h *SocialHandler) SendFriendRequest(c *gin.Context) {
 		return
 	}
 
-	friendship, err := h.svc.SendFriendRequest(userID, uuid.MustParse(req.FriendID))
+	friendID, err := uuid.Parse(req.FriendID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid friend ID"})
+
+		return
+	}
+
+	friendship, err := h.svc.SendFriendRequest(userID, friendID)
 	if err != nil {
 		if errors.Is(err, service.ErrAlreadyExists) {
 			c.JSON(http.StatusConflict, gin.H{"error": "Friend request already exists"})
@@ -84,8 +97,17 @@ func (h *SocialHandler) SendFriendRequest(c *gin.Context) {
 
 // AcceptFriendRequest accepts a pending friend request.
 func (h *SocialHandler) AcceptFriendRequest(c *gin.Context) {
-	userID := uuid.MustParse(c.GetString("user_id"))
-	requestID := uuid.MustParse(c.Param("id"))
+	userID, ok := parseUserID(c)
+	if !ok {
+		return
+	}
+
+	requestID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request ID"})
+
+		return
+	}
 
 	friendship, err := h.svc.AcceptFriendRequest(requestID, userID)
 	if err != nil {
@@ -104,7 +126,10 @@ func (h *SocialHandler) AcceptFriendRequest(c *gin.Context) {
 
 // GetFriendsFeed returns posts from the user's friends.
 func (h *SocialHandler) GetFriendsFeed(c *gin.Context) {
-	userID := uuid.MustParse(c.GetString("user_id"))
+	userID, ok := parseUserID(c)
+	if !ok {
+		return
+	}
 
 	posts, err := h.svc.GetFriendsFeed(userID)
 	if err != nil {
@@ -118,7 +143,10 @@ func (h *SocialHandler) GetFriendsFeed(c *gin.Context) {
 
 // CreatePost creates a new post about a movie or TV show.
 func (h *SocialHandler) CreatePost(c *gin.Context) {
-	userID := uuid.MustParse(c.GetString("user_id"))
+	userID, ok := parseUserID(c)
+	if !ok {
+		return
+	}
 
 	var req struct {
 		TMDBId    int    `json:"tmdb_id" binding:"required"`
