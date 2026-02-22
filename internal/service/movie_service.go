@@ -204,6 +204,8 @@ func (s *MovieService) CheckWatchlist(userID uuid.UUID, movieID int) (bool, erro
 
 // AddToWatchlist converts a request into a Database Watchlist model.
 func (s *MovieService) AddToWatchlist(userID uuid.UUID, req models.Movie) (*models.Watchlist, error) {
+	println("Request trailer", req.TrailerKey) // Debug log to verify trailer key presence
+
 	item := &models.Watchlist{
 		UserID:       userID,
 		TMDBId:       req.ID,
@@ -211,6 +213,7 @@ func (s *MovieService) AddToWatchlist(userID uuid.UUID, req models.Movie) (*mode
 		PosterPath:   req.PosterPath,
 		BackdropPath: req.BackdropPath,
 		MediaType:    req.MediaType,
+		TrailerKey:   req.TrailerKey,
 		AddedAt:      time.Now(),
 	}
 

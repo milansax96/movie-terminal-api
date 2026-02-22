@@ -24,5 +24,6 @@ type Watchlist struct {
 	PosterPath   string    `json:"poster_path"`
 	BackdropPath string    `json:"backdrop_path"`
 	MediaType    string    `gorm:"not null" json:"media_type"`
+	TrailerKey   string    `json:"trailer_key"`
 	AddedAt      time.Time `json:"added_at"`
 }

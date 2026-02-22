@@ -197,6 +197,7 @@ func (h *MovieHandler) AddToWatchlist(c *gin.Context) {
 		PosterPath   string `json:"poster_path"`
 		BackdropPath string `json:"backdrop_path"`
 		MediaType    string `json:"media_type" binding:"required"`
+		TrailerKey   string `json:"trailer_key"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -211,6 +212,7 @@ func (h *MovieHandler) AddToWatchlist(c *gin.Context) {
 		PosterPath:   req.PosterPath,
 		BackdropPath: req.BackdropPath,
 		MediaType:    req.MediaType,
+		TrailerKey:   req.TrailerKey,
 	})
 	if err != nil {
 		if errors.Is(err, service.ErrAlreadyExists) {
