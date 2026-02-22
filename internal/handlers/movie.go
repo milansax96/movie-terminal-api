@@ -45,6 +45,20 @@ func (h *MovieHandler) GetDiscoverFeed(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"results": movies})
 }
 
+// GetDiscoverAll returns multiple categories concurrently in a single response.
+func (h *MovieHandler) GetDiscoverAll(c *gin.Context) {
+	uid, _ := uuid.Parse(c.GetString("user_id"))
+
+	movies, err := h.svc.DiscoverAll(uid)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch discover feed"})
+
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"results": movies})
+}
+
 // SearchMovies searches for movies and TV shows.
 func (h *MovieHandler) SearchMovies(c *gin.Context) {
 	query := c.Query("q")

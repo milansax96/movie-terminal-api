@@ -32,6 +32,7 @@ func RegisterProtectedRoutes(r *gin.Engine, jwtSecret string, userSvc service.Us
 
 		// Discovery & Search
 		api.GET("/discover", movieH.GetDiscoverFeed)
+		api.GET("/discover/all", movieH.GetDiscoverAll)
 		api.GET("/search", movieH.SearchMovies)
 
 		// Movie Detail (TMDB proxy)

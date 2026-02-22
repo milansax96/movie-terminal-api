@@ -35,7 +35,7 @@ func newTestEnv(t *testing.T) *TestEnv {
 }
 
 func (e *TestEnv) MovieService() *MovieService {
-	return NewMovieService(e.TMDB.MockAPI, e.Watchlist.MockWatchlistRepository)
+	return NewMovieService(e.TMDB.MockAPI, e.Watchlist.MockWatchlistRepository, "")
 }
 
 func (e *TestEnv) UserService() *UserService {
@@ -60,6 +60,18 @@ func (h *TMDBHelper) ReturnsTopRated(page int, movies []models.Movie) {
 	h.On("GetTopRated", page).Return(movies, nil)
 }
 
+func (h *TMDBHelper) ReturnsNowPlaying(page int, movies []models.Movie) {
+	h.On("GetNowPlaying", page).Return(movies, nil)
+}
+
+func (h *TMDBHelper) ReturnsPopular(page int, movies []models.Movie) {
+	h.On("GetPopular", page).Return(movies, nil)
+}
+
+func (h *TMDBHelper) ReturnsUpcoming(page int, movies []models.Movie) {
+	h.On("GetUpcoming", page).Return(movies, nil)
+}
+
 func (h *TMDBHelper) ReturnsGenre(genreID, page int, movies []models.Movie) {
 	h.On("DiscoverByGenre", genreID, page).Return(movies, nil)
 }
@@ -82,6 +94,10 @@ func (h *TMDBHelper) ReturnsCredits(mediaType string, id int, credits *tmdb.Cred
 
 func (h *TMDBHelper) ReturnsProviders(mediaType string, id int, providers json.RawMessage) {
 	h.On("GetProviders", mediaType, id).Return(providers, nil)
+}
+
+func (h *TMDBHelper) NowPlayingFails(page int, err error) {
+	h.On("GetNowPlaying", page).Return([]models.Movie(nil), err)
 }
 
 func (h *TMDBHelper) TrendingFails(err error) {

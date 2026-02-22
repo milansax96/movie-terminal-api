@@ -51,7 +51,7 @@ func main() {
 	// Services
 	authSvc := service.NewAuthService(userRepo, cfg)
 	userSvc := service.NewUserService(userRepo)
-	movieSvc := service.NewMovieService(tmdbClient, watchlistRepo)
+	movieSvc := service.NewMovieService(tmdbClient, watchlistRepo, cfg.CloudinaryCloudName)
 	socialSvc := service.NewSocialService(friendshipRepo, postRepo, userRepo)
 
 	// Router

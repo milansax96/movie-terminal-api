@@ -65,6 +65,57 @@ func TestGetTopRated_CacheHit(t *testing.T) {
 	inner.AssertNumberOfCalls(t, "GetTopRated", 1)
 }
 
+func TestGetNowPlaying_CacheHit(t *testing.T) {
+	client, inner := newCachedClient(t)
+	movies := []models.Movie{{ID: 5, Title: "Now Playing"}}
+	inner.On("GetNowPlaying", 1).Return(movies, nil).Once()
+
+	first, _ := client.GetNowPlaying(1)
+	second, _ := client.GetNowPlaying(1)
+	assert.Equal(t, first, second)
+
+	inner.AssertNumberOfCalls(t, "GetNowPlaying", 1)
+}
+
+func TestGetPopular_CacheHit(t *testing.T) {
+	client, inner := newCachedClient(t)
+	movies := []models.Movie{{ID: 6, Title: "Popular"}}
+	inner.On("GetPopular", 1).Return(movies, nil).Once()
+
+	first, _ := client.GetPopular(1)
+	second, _ := client.GetPopular(1)
+	assert.Equal(t, first, second)
+
+	inner.AssertNumberOfCalls(t, "GetPopular", 1)
+}
+
+func TestGetUpcoming_CacheHit(t *testing.T) {
+	client, inner := newCachedClient(t)
+	movies := []models.Movie{{ID: 7, Title: "Upcoming"}}
+	inner.On("GetUpcoming", 1).Return(movies, nil).Once()
+
+	first, _ := client.GetUpcoming(1)
+	second, _ := client.GetUpcoming(1)
+	assert.Equal(t, first, second)
+
+	inner.AssertNumberOfCalls(t, "GetUpcoming", 1)
+}
+
+func TestGetNowPlaying_ErrorNotCached(t *testing.T) {
+	client, inner := newCachedClient(t)
+	inner.On("GetNowPlaying", 1).Return([]models.Movie(nil), errors.New("fail")).Once()
+	inner.On("GetNowPlaying", 1).Return([]models.Movie{{ID: 1}}, nil).Once()
+
+	_, err := client.GetNowPlaying(1)
+	assert.Error(t, err)
+
+	movies, err := client.GetNowPlaying(1)
+	assert.NoError(t, err)
+	assert.Len(t, movies, 1)
+
+	inner.AssertNumberOfCalls(t, "GetNowPlaying", 2)
+}
+
 func TestDiscoverByGenre_CacheHit(t *testing.T) {
 	client, inner := newCachedClient(t)
 	movies := []models.Movie{{ID: 3, Title: "Action Movie"}}

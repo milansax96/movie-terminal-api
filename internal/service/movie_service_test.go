@@ -83,12 +83,156 @@ func TestDiscover(t *testing.T) {
 	}
 }
 
+func TestDiscover_NewCategories(t *testing.T) {
+	tests := map[string]struct {
+		genre string
+		setup func(*TestEnv, uuid.UUID)
+		title string
+	}{
+		"now_playing": {"now_playing", func(env *TestEnv, userID uuid.UUID) {
+			env.TMDB.ReturnsNowPlaying(1, []models.Movie{{ID: 10, Title: "Now Playing"}})
+			env.Watchlist.ReturnsWatchlist(userID, nil)
+		}, "Now Playing"},
+		"popular": {"popular", func(env *TestEnv, userID uuid.UUID) {
+			env.TMDB.ReturnsPopular(1, []models.Movie{{ID: 11, Title: "Popular"}})
+			env.Watchlist.ReturnsWatchlist(userID, nil)
+		}, "Popular"},
+		"upcoming": {"upcoming", func(env *TestEnv, userID uuid.UUID) {
+			env.TMDB.ReturnsUpcoming(1, []models.Movie{{ID: 12, Title: "Upcoming"}})
+			env.Watchlist.ReturnsWatchlist(userID, nil)
+		}, "Upcoming"},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			env := newTestEnv(t)
+			userID := uuid.New()
+			tt.setup(env, userID)
+
+			movies, err := env.MovieService().Discover(userID, tt.genre, 1)
+			require.NoError(t, err)
+			require.Len(t, movies, 1)
+			assert.Equal(t, tt.title, movies[0].Title)
+		})
+	}
+}
+
 func TestDiscover_GenreMapContainsExpectedKeys(t *testing.T) {
 	expected := []string{"action", "comedy", "horror", "romance", "mystery", "sci_fi", "western", "animation", "tv_movie"}
 	for _, key := range expected {
 		_, ok := genreMap[key]
 		assert.True(t, ok, "genreMap missing key: %s", key)
 	}
+}
+
+// --- DiscoverAll ---
+
+func TestDiscoverAll(t *testing.T) {
+	trailer := []tmdb.Video{{Key: "yt123", Name: "Trailer", Site: "YouTube", Type: "Trailer"}}
+
+	t.Run("fetches categories and filters to movies with trailers", func(t *testing.T) {
+		env := newTestEnv(t)
+		userID := uuid.New()
+
+		env.TMDB.ReturnsTrending([]models.Movie{{ID: 1, Title: "Trending", MediaType: "movie"}})
+		env.TMDB.ReturnsNowPlaying(1, []models.Movie{{ID: 2, Title: "Now Playing", MediaType: "movie"}})
+		env.TMDB.ReturnsUpcoming(1, []models.Movie{{ID: 3, Title: "Upcoming", MediaType: "movie"}})
+		env.TMDB.ReturnsVideos("movie", 1, trailer)
+		env.TMDB.ReturnsVideos("movie", 2, trailer)
+		env.TMDB.ReturnsVideos("movie", 3, trailer)
+		env.Watchlist.ReturnsWatchlist(userID, nil)
+
+		movies, err := env.MovieService().DiscoverAll(userID)
+		require.NoError(t, err)
+		assert.Len(t, movies, 3)
+	})
+
+	t.Run("excludes movies without trailers", func(t *testing.T) {
+		env := newTestEnv(t)
+
+		env.TMDB.ReturnsTrending([]models.Movie{{ID: 1, Title: "Has Trailer", MediaType: "movie"}})
+		env.TMDB.ReturnsNowPlaying(1, []models.Movie{{ID: 2, Title: "No Trailer", MediaType: "movie"}})
+		env.TMDB.ReturnsUpcoming(1, []models.Movie{{ID: 3, Title: "Also Has Trailer", MediaType: "movie"}})
+		env.TMDB.ReturnsVideos("movie", 1, trailer)
+		env.TMDB.ReturnsVideos("movie", 2, []tmdb.Video{})
+		env.TMDB.ReturnsVideos("movie", 3, trailer)
+
+		movies, err := env.MovieService().DiscoverAll(uuid.Nil)
+		require.NoError(t, err)
+		assert.Len(t, movies, 2)
+
+		ids := map[int]bool{}
+		for _, m := range movies {
+			ids[m.ID] = true
+		}
+		assert.True(t, ids[1])
+		assert.True(t, ids[3])
+		assert.False(t, ids[2])
+	})
+
+	t.Run("enriches with watchlist", func(t *testing.T) {
+		env := newTestEnv(t)
+		userID := uuid.New()
+
+		env.TMDB.ReturnsTrending([]models.Movie{{ID: 1, Title: "Trending", MediaType: "movie"}})
+		env.TMDB.ReturnsNowPlaying(1, []models.Movie{{ID: 2, Title: "Now Playing", MediaType: "movie"}})
+		env.TMDB.ReturnsUpcoming(1, []models.Movie{{ID: 3, Title: "Upcoming", MediaType: "movie"}})
+		env.TMDB.ReturnsVideos("movie", 1, trailer)
+		env.TMDB.ReturnsVideos("movie", 2, trailer)
+		env.TMDB.ReturnsVideos("movie", 3, trailer)
+		env.Watchlist.ReturnsWatchlist(userID, []models.Watchlist{{TMDBId: 1}})
+
+		movies, err := env.MovieService().DiscoverAll(userID)
+		require.NoError(t, err)
+
+		watchlisted := map[int]bool{}
+		for _, m := range movies {
+			watchlisted[m.ID] = m.IsWatchlisted
+		}
+		assert.True(t, watchlisted[1])
+		assert.False(t, watchlisted[2])
+		assert.False(t, watchlisted[3])
+	})
+
+	t.Run("partial failure still returns other categories", func(t *testing.T) {
+		env := newTestEnv(t)
+
+		env.TMDB.ReturnsTrending([]models.Movie{{ID: 1, Title: "Trending", MediaType: "movie"}})
+		env.TMDB.NowPlayingFails(1, errors.New("timeout"))
+		env.TMDB.ReturnsUpcoming(1, []models.Movie{{ID: 3, Title: "Upcoming", MediaType: "movie"}})
+		env.TMDB.ReturnsVideos("movie", 1, trailer)
+		env.TMDB.ReturnsVideos("movie", 3, trailer)
+
+		movies, err := env.MovieService().DiscoverAll(uuid.Nil)
+		require.NoError(t, err)
+		assert.Len(t, movies, 2)
+	})
+}
+
+// --- EnrichWithWatchlist ---
+
+func TestEnrichWithWatchlist_NilUser(t *testing.T) {
+	env := newTestEnv(t)
+	env.TMDB.ReturnsTrending([]models.Movie{{ID: 1, Title: "Movie"}})
+
+	movies, err := env.MovieService().Discover(uuid.Nil, "trending", 1)
+	require.NoError(t, err)
+	assert.False(t, movies[0].IsWatchlisted)
+}
+
+func TestEnrichWithWatchlist_MarksSavedMovies(t *testing.T) {
+	env := newTestEnv(t)
+	userID := uuid.New()
+	env.TMDB.ReturnsTrending([]models.Movie{
+		{ID: 1, Title: "Saved"},
+		{ID: 2, Title: "Not Saved"},
+	})
+	env.Watchlist.ReturnsWatchlist(userID, []models.Watchlist{{TMDBId: 1}})
+
+	movies, err := env.MovieService().Discover(userID, "trending", 1)
+	require.NoError(t, err)
+	assert.True(t, movies[0].IsWatchlisted)
+	assert.False(t, movies[1].IsWatchlisted)
 }
 
 // --- Search ---

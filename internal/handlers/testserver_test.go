@@ -60,6 +60,7 @@ func newTestServer(t *testing.T) *TestServer {
 
 	// Movies
 	protected.GET("/discover", movieH.GetDiscoverFeed)
+	protected.GET("/discover/all", movieH.GetDiscoverAll)
 	protected.GET("/search", movieH.SearchMovies)
 	protected.GET("/movies/:id", movieH.GetMovieDetail)
 	protected.GET("/movies/:id/videos", movieH.GetMovieVideos)

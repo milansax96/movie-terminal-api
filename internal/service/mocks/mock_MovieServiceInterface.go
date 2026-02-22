@@ -201,6 +201,64 @@ func (_c *MockMovieServiceInterface_Discover_Call) RunAndReturn(run func(uuid.UU
 	return _c
 }
 
+// DiscoverAll provides a mock function with given fields: userID
+func (_m *MockMovieServiceInterface) DiscoverAll(userID uuid.UUID) ([]models.Movie, error) {
+	ret := _m.Called(userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DiscoverAll")
+	}
+
+	var r0 []models.Movie
+	var r1 error
+	if rf, ok := ret.Get(0).(func(uuid.UUID) ([]models.Movie, error)); ok {
+		return rf(userID)
+	}
+	if rf, ok := ret.Get(0).(func(uuid.UUID) []models.Movie); ok {
+		r0 = rf(userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Movie)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(uuid.UUID) error); ok {
+		r1 = rf(userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockMovieServiceInterface_DiscoverAll_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DiscoverAll'
+type MockMovieServiceInterface_DiscoverAll_Call struct {
+	*mock.Call
+}
+
+// DiscoverAll is a helper method to define mock.On call
+//   - userID uuid.UUID
+func (_e *MockMovieServiceInterface_Expecter) DiscoverAll(userID interface{}) *MockMovieServiceInterface_DiscoverAll_Call {
+	return &MockMovieServiceInterface_DiscoverAll_Call{Call: _e.mock.On("DiscoverAll", userID)}
+}
+
+func (_c *MockMovieServiceInterface_DiscoverAll_Call) Run(run func(userID uuid.UUID)) *MockMovieServiceInterface_DiscoverAll_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *MockMovieServiceInterface_DiscoverAll_Call) Return(_a0 []models.Movie, _a1 error) *MockMovieServiceInterface_DiscoverAll_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockMovieServiceInterface_DiscoverAll_Call) RunAndReturn(run func(uuid.UUID) ([]models.Movie, error)) *MockMovieServiceInterface_DiscoverAll_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetCredits provides a mock function with given fields: mediaType, id
 func (_m *MockMovieServiceInterface) GetCredits(mediaType string, id int) (*tmdb.CreditsResponse, error) {
 	ret := _m.Called(mediaType, id)

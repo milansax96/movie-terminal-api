@@ -25,6 +25,7 @@ type UserServiceInterface interface {
 type MovieServiceInterface interface {
 	// These now return our clean Domain Model and take userID for watchlist enrichment
 	Discover(userID uuid.UUID, genre string, page int) ([]models.Movie, error)
+	DiscoverAll(userID uuid.UUID) ([]models.Movie, error)
 	Search(userID uuid.UUID, query string, page int) ([]models.Movie, error)
 
 	// Details still use TMDB structs for now (unless you map them too)

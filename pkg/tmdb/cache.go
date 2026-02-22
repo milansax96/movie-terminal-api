@@ -12,14 +12,17 @@ import (
 
 // TTL constants for different endpoint types.
 const (
-	ttlTrending  = 1 * time.Hour
-	ttlTopRated  = 6 * time.Hour
-	ttlGenre     = 3 * time.Hour
-	ttlSearch    = 30 * time.Minute
-	ttlDetail    = 24 * time.Hour
-	ttlVideos    = 24 * time.Hour
-	ttlCredits   = 24 * time.Hour
-	ttlProviders = 6 * time.Hour
+	ttlTrending   = 1 * time.Hour
+	ttlTopRated   = 6 * time.Hour
+	ttlNowPlaying = 3 * time.Hour
+	ttlPopular    = 3 * time.Hour
+	ttlUpcoming   = 6 * time.Hour
+	ttlGenre      = 3 * time.Hour
+	ttlSearch     = 30 * time.Minute
+	ttlDetail     = 24 * time.Hour
+	ttlVideos     = 24 * time.Hour
+	ttlCredits    = 24 * time.Hour
+	ttlProviders  = 6 * time.Hour
 
 	cleanupInterval = 10 * time.Minute
 )
@@ -73,6 +76,33 @@ func (c *CachedClient) GetTopRated(page int) ([]models.Movie, error) {
 
 	return cacheGet(c, key, ttlTopRated, func() ([]models.Movie, error) {
 		return c.inner.GetTopRated(page)
+	})
+}
+
+// GetNowPlaying returns now-playing movies, cached for 3 hours.
+func (c *CachedClient) GetNowPlaying(page int) ([]models.Movie, error) {
+	key := fmt.Sprintf("now_playing:%d", page)
+
+	return cacheGet(c, key, ttlNowPlaying, func() ([]models.Movie, error) {
+		return c.inner.GetNowPlaying(page)
+	})
+}
+
+// GetPopular returns popular movies, cached for 3 hours.
+func (c *CachedClient) GetPopular(page int) ([]models.Movie, error) {
+	key := fmt.Sprintf("popular:%d", page)
+
+	return cacheGet(c, key, ttlPopular, func() ([]models.Movie, error) {
+		return c.inner.GetPopular(page)
+	})
+}
+
+// GetUpcoming returns upcoming movies, cached for 6 hours.
+func (c *CachedClient) GetUpcoming(page int) ([]models.Movie, error) {
+	key := fmt.Sprintf("upcoming:%d", page)
+
+	return cacheGet(c, key, ttlUpcoming, func() ([]models.Movie, error) {
+		return c.inner.GetUpcoming(page)
 	})
 }
 

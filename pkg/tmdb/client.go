@@ -15,6 +15,9 @@ import (
 type API interface {
 	GetTrending(mediaType string, timeWindow string) ([]models.Movie, error)
 	GetTopRated(page int) ([]models.Movie, error)
+	GetNowPlaying(page int) ([]models.Movie, error)
+	GetPopular(page int) ([]models.Movie, error)
+	GetUpcoming(page int) ([]models.Movie, error)
 	DiscoverByGenre(genreID int, page int) ([]models.Movie, error)
 	SearchMovies(query string, page int) ([]models.Movie, error)
 	GetMovieDetails(mediaType string, id int) (*MovieDetail, error)
@@ -148,6 +151,39 @@ func (c *Client) GetTrending(mediaType string, timeWindow string) ([]models.Movi
 func (c *Client) GetTopRated(page int) ([]models.Movie, error) {
 	var res MovieListResponse
 	path := fmt.Sprintf("/movie/top_rated?page=%d", page)
+	if err := c.fetch(path, &res); err != nil {
+		return nil, err
+	}
+
+	return toDomainListWithDefault(res.Results, "movie"), nil
+}
+
+// GetNowPlaying returns movies currently in theatres.
+func (c *Client) GetNowPlaying(page int) ([]models.Movie, error) {
+	var res MovieListResponse
+	path := fmt.Sprintf("/movie/now_playing?page=%d", page)
+	if err := c.fetch(path, &res); err != nil {
+		return nil, err
+	}
+
+	return toDomainListWithDefault(res.Results, "movie"), nil
+}
+
+// GetPopular returns popular movies.
+func (c *Client) GetPopular(page int) ([]models.Movie, error) {
+	var res MovieListResponse
+	path := fmt.Sprintf("/movie/popular?page=%d", page)
+	if err := c.fetch(path, &res); err != nil {
+		return nil, err
+	}
+
+	return toDomainListWithDefault(res.Results, "movie"), nil
+}
+
+// GetUpcoming returns movies that are being released soon.
+func (c *Client) GetUpcoming(page int) ([]models.Movie, error) {
+	var res MovieListResponse
+	path := fmt.Sprintf("/movie/upcoming?page=%d", page)
 	if err := c.fetch(path, &res); err != nil {
 		return nil, err
 	}

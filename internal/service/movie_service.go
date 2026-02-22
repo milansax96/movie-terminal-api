@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -25,15 +26,18 @@ var genreMap = map[string]int{
 
 // MovieService handles movie discovery, search, and watchlist operations.
 type MovieService struct {
-	tmdb          tmdb.API
-	watchlistRepo repository.WatchlistRepository
+	tmdb                tmdb.API
+	watchlistRepo       repository.WatchlistRepository
+	cloudinaryCloudName string
 }
 
 // NewMovieService creates and returns a new MovieService instance.
-func NewMovieService(tmdbClient tmdb.API, watchlistRepo repository.WatchlistRepository) *MovieService {
+func NewMovieService(tmdbClient tmdb.API, watchlistRepo repository.WatchlistRepository, cloudinaryCloudName string) *MovieService {
+
 	return &MovieService{
-		tmdb:          tmdbClient,
-		watchlistRepo: watchlistRepo,
+		tmdb:                tmdbClient,
+		watchlistRepo:       watchlistRepo,
+		cloudinaryCloudName: cloudinaryCloudName,
 	}
 }
 
@@ -47,6 +51,12 @@ func (s *MovieService) Discover(userID uuid.UUID, genre string, page int) ([]mod
 		movies, err = s.tmdb.GetTrending("all", "week")
 	case "top_rated":
 		movies, err = s.tmdb.GetTopRated(page)
+	case "now_playing":
+		movies, err = s.tmdb.GetNowPlaying(page)
+	case "popular":
+		movies, err = s.tmdb.GetPopular(page)
+	case "upcoming":
+		movies, err = s.tmdb.GetUpcoming(page)
 	default:
 		genreID, ok := genreMap[genre]
 		if !ok {
@@ -60,6 +70,96 @@ func (s *MovieService) Discover(userID uuid.UUID, genre string, page int) ([]mod
 	}
 
 	return s.enrichWithWatchlist(userID, movies)
+}
+func (s *MovieService) DiscoverAll(userID uuid.UUID) ([]models.Movie, error) {
+	categories := []string{"trending", "now_playing", "upcoming"}
+	uniqueMovies := make(map[int]models.Movie)
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+
+	for _, cat := range categories {
+		wg.Add(1)
+		go func(category string) {
+			defer wg.Done()
+
+			movies, err := s.Discover(userID, category, 1)
+			if err != nil {
+				return
+			}
+
+			var videoWg sync.WaitGroup
+			for i := range movies {
+				videoWg.Add(1)
+				go func(idx int) {
+					defer videoWg.Done()
+
+					mType := movies[idx].MediaType
+					if mType == "" {
+						mType = "movie"
+					}
+
+					videos, err := s.GetVideos(mType, movies[idx].ID)
+					if err == nil && len(videos) > 0 {
+						for _, v := range videos {
+							// Look for official YouTube trailers
+							if v.Site == "YouTube" && v.Type == "Trailer" {
+								movies[idx].TrailerKey = v.Key
+								break
+							}
+						}
+					}
+				}(i)
+			}
+			videoWg.Wait()
+
+			// Final Filter: Only keep movies with a valid trailer key
+			mu.Lock()
+			for _, m := range movies {
+				if m.TrailerKey != "" {
+					uniqueMovies[m.ID] = m
+				}
+			}
+			mu.Unlock()
+		}(cat)
+	}
+
+	wg.Wait()
+
+	finalResults := make([]models.Movie, 0, len(uniqueMovies))
+	for _, movie := range uniqueMovies {
+		finalResults = append(finalResults, movie)
+	}
+
+	// s.enrichWithSmartCrop(finalResults)
+
+	return s.enrichWithWatchlist(userID, finalResults)
+}
+
+// enrichAllWithWatchlist marks IsWatchlisted across all categories using a single DB query.
+func (s *MovieService) enrichAllWithWatchlist(userID uuid.UUID, feed map[string][]models.Movie) (map[string][]models.Movie, error) {
+	if userID == uuid.Nil {
+		return feed, nil
+	}
+
+	watchlist, err := s.watchlistRepo.GetByUserID(userID)
+	if err != nil {
+		return feed, nil
+	}
+
+	saved := make(map[int]struct{})
+	for _, item := range watchlist {
+		saved[item.TMDBId] = struct{}{}
+	}
+
+	for cat := range feed {
+		for i := range feed[cat] {
+			if _, exists := saved[feed[cat][i].ID]; exists {
+				feed[cat][i].IsWatchlisted = true
+			}
+		}
+	}
+
+	return feed, nil
 }
 
 // Search queries TMDB and checks which results the user has already saved.
@@ -134,6 +234,23 @@ func (s *MovieService) RemoveFromWatchlist(userID uuid.UUID, movieID int) error 
 
 	return nil
 }
+
+// enrichWithSmartCrop generates Cloudinary smart-crop URLs and fires warm-up requests.
+// func (s *MovieService) enrichWithSmartCrop(movies []models.Movie) {
+// 	if s.cloudinaryCloudName == "" {
+// 		return
+// 	}
+
+// 	for i := range movies {
+// 		if movies[i].TrailerKey == "" {
+// 			continue
+// 		}
+
+// 		url := cloudinary.GenerateSmartCropURL(s.cloudinaryCloudName, movies[i].TrailerKey)
+// 		movies[i].ProcessedVideoURL = url
+// 		cloudinary.WarmUp(url)
+// 	}
+// }
 
 // enrichWithWatchlist marks movies as 'IsWatchlisted' based on the user's data.
 func (s *MovieService) enrichWithWatchlist(userID uuid.UUID, movies []models.Movie) ([]models.Movie, error) {

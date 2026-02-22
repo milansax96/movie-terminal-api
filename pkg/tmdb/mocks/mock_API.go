@@ -200,6 +200,122 @@ func (_c *MockAPI_GetMovieDetails_Call) RunAndReturn(run func(string, int) (*tmd
 	return _c
 }
 
+// GetNowPlaying provides a mock function with given fields: page
+func (_m *MockAPI) GetNowPlaying(page int) ([]models.Movie, error) {
+	ret := _m.Called(page)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetNowPlaying")
+	}
+
+	var r0 []models.Movie
+	var r1 error
+	if rf, ok := ret.Get(0).(func(int) ([]models.Movie, error)); ok {
+		return rf(page)
+	}
+	if rf, ok := ret.Get(0).(func(int) []models.Movie); ok {
+		r0 = rf(page)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Movie)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(int) error); ok {
+		r1 = rf(page)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockAPI_GetNowPlaying_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetNowPlaying'
+type MockAPI_GetNowPlaying_Call struct {
+	*mock.Call
+}
+
+// GetNowPlaying is a helper method to define mock.On call
+//   - page int
+func (_e *MockAPI_Expecter) GetNowPlaying(page interface{}) *MockAPI_GetNowPlaying_Call {
+	return &MockAPI_GetNowPlaying_Call{Call: _e.mock.On("GetNowPlaying", page)}
+}
+
+func (_c *MockAPI_GetNowPlaying_Call) Run(run func(page int)) *MockAPI_GetNowPlaying_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(int))
+	})
+	return _c
+}
+
+func (_c *MockAPI_GetNowPlaying_Call) Return(_a0 []models.Movie, _a1 error) *MockAPI_GetNowPlaying_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockAPI_GetNowPlaying_Call) RunAndReturn(run func(int) ([]models.Movie, error)) *MockAPI_GetNowPlaying_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetPopular provides a mock function with given fields: page
+func (_m *MockAPI) GetPopular(page int) ([]models.Movie, error) {
+	ret := _m.Called(page)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetPopular")
+	}
+
+	var r0 []models.Movie
+	var r1 error
+	if rf, ok := ret.Get(0).(func(int) ([]models.Movie, error)); ok {
+		return rf(page)
+	}
+	if rf, ok := ret.Get(0).(func(int) []models.Movie); ok {
+		r0 = rf(page)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Movie)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(int) error); ok {
+		r1 = rf(page)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockAPI_GetPopular_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetPopular'
+type MockAPI_GetPopular_Call struct {
+	*mock.Call
+}
+
+// GetPopular is a helper method to define mock.On call
+//   - page int
+func (_e *MockAPI_Expecter) GetPopular(page interface{}) *MockAPI_GetPopular_Call {
+	return &MockAPI_GetPopular_Call{Call: _e.mock.On("GetPopular", page)}
+}
+
+func (_c *MockAPI_GetPopular_Call) Run(run func(page int)) *MockAPI_GetPopular_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(int))
+	})
+	return _c
+}
+
+func (_c *MockAPI_GetPopular_Call) Return(_a0 []models.Movie, _a1 error) *MockAPI_GetPopular_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockAPI_GetPopular_Call) RunAndReturn(run func(int) ([]models.Movie, error)) *MockAPI_GetPopular_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetProviders provides a mock function with given fields: mediaType, id
 func (_m *MockAPI) GetProviders(mediaType string, id int) (json.RawMessage, error) {
 	ret := _m.Called(mediaType, id)
@@ -372,6 +488,64 @@ func (_c *MockAPI_GetTrending_Call) Return(_a0 []models.Movie, _a1 error) *MockA
 }
 
 func (_c *MockAPI_GetTrending_Call) RunAndReturn(run func(string, string) ([]models.Movie, error)) *MockAPI_GetTrending_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetUpcoming provides a mock function with given fields: page
+func (_m *MockAPI) GetUpcoming(page int) ([]models.Movie, error) {
+	ret := _m.Called(page)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetUpcoming")
+	}
+
+	var r0 []models.Movie
+	var r1 error
+	if rf, ok := ret.Get(0).(func(int) ([]models.Movie, error)); ok {
+		return rf(page)
+	}
+	if rf, ok := ret.Get(0).(func(int) []models.Movie); ok {
+		r0 = rf(page)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.Movie)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(int) error); ok {
+		r1 = rf(page)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockAPI_GetUpcoming_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetUpcoming'
+type MockAPI_GetUpcoming_Call struct {
+	*mock.Call
+}
+
+// GetUpcoming is a helper method to define mock.On call
+//   - page int
+func (_e *MockAPI_Expecter) GetUpcoming(page interface{}) *MockAPI_GetUpcoming_Call {
+	return &MockAPI_GetUpcoming_Call{Call: _e.mock.On("GetUpcoming", page)}
+}
+
+func (_c *MockAPI_GetUpcoming_Call) Run(run func(page int)) *MockAPI_GetUpcoming_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(int))
+	})
+	return _c
+}
+
+func (_c *MockAPI_GetUpcoming_Call) Return(_a0 []models.Movie, _a1 error) *MockAPI_GetUpcoming_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockAPI_GetUpcoming_Call) RunAndReturn(run func(int) ([]models.Movie, error)) *MockAPI_GetUpcoming_Call {
 	_c.Call.Return(run)
 	return _c
 }
